@@ -12,6 +12,9 @@ namespace Contoso.Expenses.Web
 {
     public class Startup
     {
+        private readonly IHostingEnvironment _env;
+        public IConfiguration Configuration { get; }
+
         public Startup(IHostingEnvironment env)
         {
             var builder = new ConfigurationBuilder()
@@ -19,11 +22,17 @@ namespace Contoso.Expenses.Web
                             .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
                             .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true)
                             .AddEnvironmentVariables();
+
+            if (env.IsDevelopment())
+            {
+                builder.AddUserSecrets<Startup>();
+            }
+
+            _env = env;
+
             Configuration = builder.Build();
             //Configuration = configuration;
         }
-
-        public IConfiguration Configuration { get; }
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
@@ -39,8 +48,8 @@ namespace Contoso.Expenses.Web
 
             // see https://docs.microsoft.com/en-us/aspnet/core/security/app-secrets?view=aspnetcore-2.2
             string connectionString = Configuration["ConnectionStrings:DBConnectionString"];
-            services.AddDbContext<ContosoExpensesWebContext>(options =>                    
-                    options.UseMySQL(connectionString));
+            services.AddDbContext<ContosoExpensesWebContext>(options =>
+                    options.UseMySql(connectionString));
 
             services.Configure<ConfigValues>(Configuration.GetSection("ConfigValues"));
 
@@ -53,6 +62,7 @@ namespace Contoso.Expenses.Web
                 };
             });
 
+            services.AddSingleton<IHostingEnvironment>(_env);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -69,12 +79,22 @@ namespace Contoso.Expenses.Web
 
             context.Database.EnsureCreated();
 
-            app.UseDefaultFiles();
+            //app.UseDefaultFiles();
+            //app.UseStaticFiles();
+            //app.UseCookiePolicy();
+            //app.UseMvc();
+
+            app.UseHttpsRedirection();
             app.UseStaticFiles();
-            app.UseCookiePolicy();
 
-            app.UseMvc();
+            app.UseRouting();
 
+            app.UseAuthorization();
+
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapRazorPages();
+            });
         }
     }
 }

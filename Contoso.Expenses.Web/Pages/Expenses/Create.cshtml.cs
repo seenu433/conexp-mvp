@@ -1,5 +1,6 @@
 ﻿using Contoso.Expenses.Common.Models;
 using Contoso.Expenses.Web.Models;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Options;
@@ -18,12 +19,14 @@ namespace Contoso.Expenses.Web.Pages.Expenses
         private readonly ContosoExpensesWebContext _context;
         private string costCenterAPIUrl;
         private readonly QueueInfo _queueInfo;
+        private readonly IHostingEnvironment _env;
 
-        public CreateModel(ContosoExpensesWebContext context, IOptions<ConfigValues> config, QueueInfo queueInfo)
+        public CreateModel(ContosoExpensesWebContext context, IOptions<ConfigValues> config, QueueInfo queueInfo, IHostingEnvironment env)
         {
             _context = context;
             costCenterAPIUrl = config.Value.CostCenterAPIUrl;
             _queueInfo = queueInfo;
+            _env = env;
         }
 
         public IActionResult OnGet()
@@ -66,14 +69,18 @@ namespace Contoso.Expenses.Web.Pages.Expenses
             //CloudQueueMessage queueMessage = new CloudQueueMessage(JsonConvert.SerializeObject(Expense));
             //await queue.AddMessageAsync(queueMessage);
 
-            // Serialize the expense and write it to the NATS Queue
-            var cf = new ConnectionFactory();
-            using (var c = cf.CreateConnection(_queueInfo.ConnectionString))
+            //ToDo: Until we figure out how to OpenFaaS locally/container, ignoring OpenFaaS stuff locally. Otherwise this will fail
+            //https://secanablog.wordpress.com/2018/06/10/run-your-own-faas-with-openfaas-and-net-core/
+            if (!_env.IsDevelopment())
             {
-                Console.WriteLine($"Sending POST {JsonConvert.SerializeObject(Expense)}");
-                c.Publish(_queueInfo.QueueName, Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(Expense)));
+                // Serialize the expense and write it to the NATS Queue
+                var cf = new ConnectionFactory();
+                using (var c = cf.CreateConnection(_queueInfo.ConnectionString))
+                {
+                    Console.WriteLine($"Sending POST {JsonConvert.SerializeObject(Expense)}");
+                    c.Publish(_queueInfo.QueueName, Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(Expense)));
+                }
             }
-
             // Ensure the DB write is complete
             t.Wait();
 
@@ -94,7 +101,10 @@ namespace Contoso.Expenses.Web.Pages.Expenses
 
                 if (httpResponse.IsSuccessStatusCode)
                 {
-                    CostCenter costCenter = await httpResponse.Content.ReadAsAsync<CostCenter>();
+                    //CostCenter costCenter = await httpResponse.Content.ReadAsAsync<CostCenter>();
+                    var response = await httpResponse.Content.ReadAsStringAsync();
+                    var costCenter = JsonConvert.DeserializeObject<CostCenter>(response);
+
                     if (costCenter != null)
                         Console.WriteLine("SubmitterEmail: {0} \r\n ApproverEmail: {1} \r\n CostCenterName: {2}",
                             costCenter.SubmitterEmail, costCenter.ApproverEmail, costCenter.CostCenterName);
