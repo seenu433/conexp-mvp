@@ -1,74 +1,96 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: frontend-deployment
+  name: frontend
   labels:
-    app: frontend-deployment
+    app: frontend
 spec:
-  replicas: 1
+  minReadySeconds: 5
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 60
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 1
+    type: RollingUpdate
   selector:
     matchLabels:
-      app: frontend-deployment
+      app: frontend
   template:
     metadata:
       labels:
-        app: frontend-deployment
+        app: frontend
     spec:
       containers:
-      - name: frontend-deployment
+      - name: frontend
         image: __IMAGE__
         ports:
-        - containerPort: 80  
+        - name: http
+          containerPort: 80
+          protocol: TCP
         imagePullPolicy: Always
         env:
         - name: ConnectionStrings__DBConnectionString
           value: "__WEBDBCONSTR__"
         - name: ConfigValues__CostCenterAPIUrl
           value: "__APIURL__"
+        livenessProbe:
+          tcpSocket:
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /Expenses
+            port: http
       imagePullSecrets:
       - name: regcred
       nodeSelector: 
         "beta.kubernetes.io/os": linux
 ---
-apiVersion: v1
-kind: Service
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
 metadata:
-  name: frontend-deployment
-  labels:
-    app: frontend-deployment
+  name: frontend
 spec:
-  selector:
-    app: frontend-deployment
-  ports:
-  - name: http
-    protocol: TCP
-    port: 80
-    targetPort: 80
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: frontend
+  minReplicas: 2
+  maxReplicas: 4
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      # scale up if usage is above
+      # 99% of the requested CPU (100m)
+      targetAverageUtilization: 99
 ---
 apiVersion: networking.k8s.io/v1beta1
 kind: Ingress
 metadata:
   annotations:
+    kubernetes.io/ingress.class: "nginx"
     cert-manager.io/issuer: "letsencrypt"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
     external-dns.alpha.kubernetes.io/hostname: $host
     external-dns.alpha.kubernetes.io/target: aks.srinipadala.xyz
-    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
     nginx.ingress.kubernetes.io/configuration-snippet: |
-      proxy_set_header l5d-dst-override $service_name.$namespace.svc.cluster.local;
+      proxy_set_header l5d-dst-override $service_name.$namespace.svc.cluster.local:80;
       proxy_hide_header l5d-remote-ip;
       proxy_hide_header l5d-server-id;
-  name: frontend-deployment
+  name: frontend
   labels:
-    app: frontend-deployment
+    app: frontend
 spec:
   rules:
-  - host: frontend-deployment.aks.srinipadala.xyz
+  - host: contoso-expenses.aks.srinipadala.xyz
     http:
       paths:
       - backend:
-          serviceName: frontend-deployment
+          serviceName: frontend
           servicePort: 80
   tls:
   - hosts:
-    - frontend-deployment.aks.srinipadala.xyz
-    secretName: frontend-deployment-secret
+    - contoso-expenses.aks.srinipadala.xyz
+    secretName: contoso-expenses-ingress-secret
