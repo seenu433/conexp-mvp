@@ -1,44 +1,65 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: backend-deployment
+  name: backend
   labels:
-    app: backend-deployment
+    app: backend
 spec:
-  replicas: 1
+  minReadySeconds: 5
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 60
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 1
+    type: RollingUpdate
   selector:
     matchLabels:
-      app: backend-deployment
+      app: backend
   template:
     metadata:
       labels:
-        app: backend-deployment
+        app: backend
     spec:
       containers:
-      - name: backend-deployment
+      - name: backend
         image: __IMAGE__
         ports:
-        - containerPort: 80
+        - name: http
+          containerPort: 80
+          protocol: TCP
         imagePullPolicy: Always
         env:
         - name: ConnectionStrings__DBConnectionString
           value: "__APIDBCONSTR__"
+      livenessProbe:
+          tcpSocket:
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /api/costcenter
+            port: http
       imagePullSecrets:
       - name: regcred
       nodeSelector: 
         "beta.kubernetes.io/os": linux
 ---
-apiVersion: v1
-kind: Service
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
 metadata:
-  name: backend-deployment
-  labels:
-    app: backend-deployment
+  name: backend
 spec:
-  selector:
-    app: backend-deployment
-  ports:
-  - name: http
-    protocol: TCP
-    port: 80
-    targetPort: 80
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: backend
+  minReplicas: 2
+  maxReplicas: 4
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      # scale up if usage is above
+      # 99% of the requested CPU (100m)
+      targetAverageUtilization: 99
