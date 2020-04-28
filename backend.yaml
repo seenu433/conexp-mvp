@@ -3,19 +3,19 @@ kind: Deployment
 metadata:
   name: backend-deployment
   labels:
-    app: backend
+    app: backend-deployment
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: backend
+      app: backend-deployment
   template:
     metadata:
       labels:
-        app: backend
+        app: backend-deployment
     spec:
       containers:
-      - name: backend
+      - name: backend-deployment
         image: __IMAGE__
         ports:
         - containerPort: 80
@@ -31,10 +31,12 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: backend-svc
+  name: backend-deployment
+  labels:
+    app: backend-deployment
 spec:
   selector:
-    app: backend
+    app: backend-deployment
   ports:
   - name: http
     protocol: TCP
