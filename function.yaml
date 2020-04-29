@@ -2,8 +2,6 @@ apiVersion: openfaas.com/v1alpha2
 kind: Function
 metadata:
   name: expenseemailsender
-  annotations:
-    topic: "nats-email"
 spec:
   name: expenseemailsender
   image: __IMAGE__
@@ -14,3 +12,5 @@ spec:
     SENDGRID_API_KEY: "__SENDGRIDAPIKEY__"
   secrets:
       - regcred
+  annotations:
+    topic: "nats-email"
