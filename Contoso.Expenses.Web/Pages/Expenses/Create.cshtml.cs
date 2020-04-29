@@ -1,4 +1,6 @@
-﻿using Contoso.Expenses.Common.Models;
+﻿using App.Metrics;
+using Contoso.Expenses.Common.Models;
+using Contoso.Expenses.Web.AppMetrics;
 using Contoso.Expenses.Web.Models;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
@@ -20,9 +22,12 @@ namespace Contoso.Expenses.Web.Pages.Expenses
         private string costCenterAPIUrl;
         private readonly QueueInfo _queueInfo;
         private readonly IHostingEnvironment _env;
+        private readonly IMetrics _metrics;
 
-        public CreateModel(ContosoExpensesWebContext context, IOptions<ConfigValues> config, QueueInfo queueInfo, IHostingEnvironment env)
+        public CreateModel(ContosoExpensesWebContext context, IOptions<ConfigValues> config, QueueInfo queueInfo,
+                            IHostingEnvironment env, IMetrics metrics)
         {
+            _metrics = metrics;
             _context = context;
             costCenterAPIUrl = config.Value.CostCenterAPIUrl;
             _queueInfo = queueInfo;
@@ -83,6 +88,9 @@ namespace Contoso.Expenses.Web.Pages.Expenses
             }
             // Ensure the DB write is complete
             t.Wait();
+
+            // This is to track customer App Metrics counter to track number of expenses submitted 
+            _metrics.Measure.Counter.Increment(MetricsRegistry.CreatedExpenseCounter);
 
             return RedirectToPage("./Index");
         }

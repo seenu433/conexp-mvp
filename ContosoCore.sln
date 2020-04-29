@@ -12,7 +12,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{1CF87116-5DEE-4C00-8687-E4813F8E4668}"
 	ProjectSection(SolutionItems) = preProject
 		backend.yaml = backend.yaml
-		Contoso.Expenses.OpenFaaS\expenseemailsender.yaml = Contoso.Expenses.OpenFaaS\expenseemailsender.yaml
 		frontend.yaml = frontend.yaml
 		function.yaml = function.yaml
 		README.md = README.md

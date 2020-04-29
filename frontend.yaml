@@ -2,6 +2,11 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: frontend-deployment
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: "/mymetrics-text"
+    prometheus.io/port: "80"
+    prometheus.io/scheme: "http"
   labels:
     app: frontend-deployment
 spec:
