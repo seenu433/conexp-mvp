@@ -2,11 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: frontend-deployment
-  annotations:
-    prometheus.io/scrape: "true"
-    prometheus.io/path: "/mymetrics-text"
-    prometheus.io/port: "80"
-    prometheus.io/scheme: "http"
   labels:
     app: conexp-frontend
 spec:
@@ -16,6 +11,11 @@ spec:
       app: conexp-frontend
   template:
     metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics-text"
+        prometheus.io/port: "80"
+        prometheus.io/scheme: "http"
       labels:
         app: conexp-frontend
     spec:
@@ -61,6 +61,10 @@ metadata:
     cert-manager.io/cluster-issuer: letsencrypt   
     external-dns.alpha.kubernetes.io/hostname: conexp.aks.srinipadala.xyz
     external-dns.alpha.kubernetes.io/target: aks.srinipadala.xyz
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header l5d-dst-override $service_name.$namespace.svc.cluster.local;
+      proxy_hide_header l5d-remote-ip;
+      proxy_hide_header l5d-server-id;
 spec:
   tls:
   - hosts:

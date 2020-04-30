@@ -1,5 +1,6 @@
 ﻿using Contoso.Expenses.Common.Models;
 using Contoso.Expenses.Web.Models;
+using Contoso.Expenses.Web.Tracing;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -8,6 +9,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Contoso.Expenses.Web
 {
@@ -41,6 +43,13 @@ namespace Contoso.Expenses.Web
             services.Configure<KestrelServerOptions>(options => { options.AllowSynchronousIO = true; });
             services.AddMetrics();
 
+            services.AddJaegerTracing(options => {
+                //options.JaegerAgentHost = Configuration["JAEGER_AGENT_HOST"];
+                options.JaegerAgentHost = "jaeger-agent.tracing";
+                options.ServiceName = "conexp";
+                options.LoggerFactory = (ILoggerFactory)new LoggerFactory();
+            });
+
             services.Configure<CookiePolicyOptions>(options =>
             {
                 // This lambda determines whether user consent for non-essential cookies is needed for a given request.
@@ -70,7 +79,7 @@ namespace Contoso.Expenses.Web
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env, ContosoExpensesWebContext context)
+        public void Configure(IApplicationBuilder app, IHostingEnvironment env, ContosoExpensesWebContext context, ILoggerFactory loggerFactory)
         {
             if (env.IsDevelopment())
             {
