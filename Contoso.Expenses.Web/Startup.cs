@@ -45,6 +45,7 @@ namespace Contoso.Expenses.Web
 
             services.AddJaegerTracing(options => {
                 //options.JaegerAgentHost = Configuration["JAEGER_AGENT_HOST"];
+                //options.JaegerAgentHost = Configuration["JAEGER_AGENT_HOST"];
                 options.JaegerAgentHost = "jaeger-agent.tracing";
                 options.ServiceName = "conexp";
                 options.LoggerFactory = (ILoggerFactory)new LoggerFactory();
